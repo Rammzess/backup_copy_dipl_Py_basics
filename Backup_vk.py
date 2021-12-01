@@ -1,4 +1,3 @@
-# import os
 import json
 import requests
 import time
@@ -37,7 +36,7 @@ class VKinfo:
         for date, photos_list in sizes_dict.items():  #сортируем словарь фото по размеру
             newlist = sorted(photos_list, key=itemgetter('height'), reverse=True) 
             sizes_dict_sorted[date] = newlist    
-        for date, photos in sizes_dict_sorted.items(): # собрать первые 5 картинок с URL в финал словарь
+        for date, photos in sizes_dict_sorted.items(): # собрать первые картинки с URL в финал словарь
             # final_dict_urls[date] = photos[:5]  
             final_dict_urls[date] = photos[0]  
             for photo in photos:  # собрать все разрешения картинок в формате width x height
@@ -52,7 +51,6 @@ class VKinfo:
  
     def _photo_counter(dict_to_count_val):
         photo_counter = 0
-        # for date in final_dict_urls: считаем фото
         photo_counter = len(final_dict_urls)  
         return photo_counter        
         
@@ -71,7 +69,6 @@ class YaUploader:
             'Authorization': 'OAuth {}'.format(self.token)
             }
         response = requests.get(upload_url, headers=headers, params=params)
-        # print(response.json())
         return response.json()
 
     def _upload_file(self, path_on_disk: str, file_path_upload):
@@ -90,7 +87,6 @@ if __name__ == '__main__':
     id_vk = input("Введите свой id Vkontakte:")
 # Test account https://vk.com/begemot_korovin  - id552934290
     token_yandex = input("Введите свой токен YandexDisk:") 
-# AQAAAABPGYUbAADLW2W-eByeo0S-hA_wWEkKj24
     final_dict_urls = {}
     
     with open('token_vk.txt', 'r') as file_vk:
@@ -105,11 +101,10 @@ if __name__ == '__main__':
             disk_url = f"disk:/vk-backup-photos/{name}.jpg"
             for i in tqdm(range(VKinfo._photo_counter(final_dict_urls)), desc = 'Uploading photos to Yandex Disk'):
                 time.sleep(0.2)
-            result = uploader._upload_file(disk_url, path_to_file) 
+            result = uploader._upload_file(disk_url, path_to_file)  # загрузило только когда прописал полный путь к файлу disk: и название
             print(result)          
-        # сработало только когда прописал полный путь к файлу disk: и название
+        
 
-        # print(VKinfo._get_user_info(id_vk, token_vk))
 
  
 

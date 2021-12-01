@@ -37,7 +37,6 @@ class VKinfo:
             newlist = sorted(photos_list, key=itemgetter('height'), reverse=True) 
             sizes_dict_sorted[date] = newlist    
         for date, photos in sizes_dict_sorted.items(): # собрать первые картинки с URL в финал словарь
-            # final_dict_urls[date] = photos[:5]  
             final_dict_urls[date] = photos[0]  
             for photo in photos:  # собрать все разрешения картинок в формате width x height
                 photo['size'] = f"{photo['height']} x {photo['width']}"            
@@ -45,13 +44,11 @@ class VKinfo:
         with open('data.json', 'w', encoding='utf-8') as f:  #запись json в файл
             json.dump(final_dict_urls, f, ensure_ascii=False, indent=4)
         pprint(final_dict_urls) 
- 
-               
         return final_dict_urls
  
-    def _photo_counter(dict_to_count_val):
+    def _photo_counter(len_count_dict):  # считаем кол-во фото
         photo_counter = 0
-        photo_counter = len(final_dict_urls)  
+        photo_counter = len(len_count_dict)  
         return photo_counter        
         
 
@@ -79,7 +76,7 @@ class YaUploader:
         response = requests.post(href, data=open(file_path_upload, 'rb'))
         response.raise_for_status()
         if response.status_code == 201:
-            print("Успешно загружено!")
+            print("Фото успешно загружено!")
         return
 
 if __name__ == '__main__':
@@ -92,17 +89,17 @@ if __name__ == '__main__':
     with open('token_vk.txt', 'r') as file_vk:
         token_vk = file_vk.read().strip()
         # Получить путь к загружаемому файлу и токен от пользователя
-        VKinfo._get_photos(id_vk, token_vk)
-        print(VKinfo._photo_counter(final_dict_urls))
-        uploader = YaUploader(token_yandex, )
-        for name, photos in final_dict_urls.items():
-            # for photo in photos:
-            path_to_file = photos['url']               
-            disk_url = f"disk:/vk-backup-photos/{name}.jpg"
-            for i in tqdm(range(VKinfo._photo_counter(final_dict_urls)), desc = 'Uploading photos to Yandex Disk'):
-                time.sleep(0.2)
-            result = uploader._upload_file(disk_url, path_to_file)  # загрузило только когда прописал полный путь к файлу disk: и название
-            print(result)          
+    VKinfo._get_photos(id_vk, token_vk)
+    # print(VKinfo._photo_counter(final_dict_urls))
+    uploader = YaUploader(token_yandex)
+    for name, photos in final_dict_urls.items():  # проходимся циклом по словарю и загружаем фото по одному
+        # for photo in photos:
+        path_to_file = photos['url']               
+        disk_url = f"disk:/vk-backup-photos/{name}.jpg"
+        for i in tqdm(range(VKinfo._photo_counter(final_dict_urls)), desc = 'Uploading photos to Yandex Disk'): # прогресс загрузки
+            time.sleep(0.2)
+        result = uploader._upload_file(disk_url, path_to_file)  # загрузило только когда прописал полный путь к файлу disk: и название
+        print(result)          
         
 
 

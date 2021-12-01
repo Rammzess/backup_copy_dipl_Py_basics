@@ -70,7 +70,7 @@ class YaUploader:
 
     def _upload_file(self, path_on_disk: str, file_path_upload):
         """Метод загружает файл на яндекс диск"""  
-        response_dict = self._get_link(path_to_file=path_on_disk)
+        response_dict = self._get_link(path_on_disk)
         href = response_dict.get("href", "")   # возвращает пустую строку если нет ключа Хреф
         #заливка
         response = requests.post(href, data=open(file_path_upload, 'rb'))

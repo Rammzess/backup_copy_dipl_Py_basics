@@ -4,105 +4,121 @@ import time
 from pprint import pprint
 from tqdm import tqdm
 from operator import itemgetter
+import os
+from dotenv import load_dotenv
 
-
-# Перебрать с json фото максимального размера + в имени добавить кол-во лаков фото
-# фото сохранить на Яндекс Диск + инфо по фотографиям сохранять в json-файл
 
 class VKinfo:
     def __init__(self, id_vk):
         self.id = id_vk
 
     def _get_photos(id_vk, token_vk):
-        sizes_dict = {}
-        sizes_dict_sorted = {}
         URL = 'https://api.vk.com/method/photos.get'
         params = {
             'user_id': id_vk,
-            'access_token': token_vk, # токен и версия api являются обязательными параметрами во всех запросах к vk
-            'v':'5.131',
-            'album_id':'profile',
-            'extended':'1',
-            'photo_sizes':'1'
+            # токен и версия api - во всех запросах к vk
+            'access_token': token_vk,
+            'v': '5.131',
+            'album_id': 'profile',
+            'extended': '1',
+            'photo_sizes': '1'
         }
-        photos_data = requests.get(URL, params=params, verify=True).json()
+        response = requests.get(URL, params=params, verify=True)
+        response.raise_for_status()
+        if response.ok:
+            photos_data = response.json()
+        else:
+            print("Возникла ошибка при сполучении данных!")
         required_info = photos_data['response']['items']
-        for object in required_info: # Получаем словари с лайками данными по фото
+        for object in required_info:
+            # переделал все в один цикл
             photo_date = object['date']
             photo_likes = str(object['likes']['count'])
-            if photo_likes in sizes_dict.keys():
-                photo_likes = str(object['likes']['count']) + '_' + str(photo_date)
-            sizes_dict[photo_likes] = object['sizes']   
-        for date, photos_list in sizes_dict.items():  #сортируем словарь фото по размеру
-            newlist = sorted(photos_list, key=itemgetter('height'), reverse=True) 
-            sizes_dict_sorted[date] = newlist    
-        for date, photos in sizes_dict_sorted.items(): # собрать первые картинки с URL в финал словарь
-            final_dict_urls[date] = photos[0]  
-            for photo in photos:  # собрать все разрешения картинок в формате width x height
-                photo['size'] = f"{photo['height']} x {photo['width']}"            
-                del photo['width'], photo['height'], photo['type']
-        with open('data.json', 'w', encoding='utf-8') as f:  #запись json в файл
+            if photo_likes in final_dict_urls.keys():
+                photo_likes = str(object['likes']['count'])\
+                    + '_' + str(photo_date)
+            sizes_list = sorted(object['sizes'],
+                                key=itemgetter('height'), reverse=True)
+            final_dict_urls[photo_likes] = sizes_list[0]
+            final_dict_urls[photo_likes]['size'] = \
+                f"{final_dict_urls[photo_likes]['height']}" \
+                + f" x {final_dict_urls[photo_likes]['width']}"
+            del final_dict_urls[photo_likes]['width'], \
+                final_dict_urls[photo_likes]['height'], \
+                final_dict_urls[photo_likes]['type']
+        with open('data.json', 'w', encoding='utf-8') as f:
             json.dump(final_dict_urls, f, ensure_ascii=False, indent=4)
-        pprint(final_dict_urls) 
+        pprint(final_dict_urls)
         return final_dict_urls
- 
-    def _photo_counter(len_count_dict):  # считаем кол-во фото
-        photo_counter = 0
-        photo_counter = len(len_count_dict)  
-        return photo_counter        
-        
+
 
 class YaUploader:
+
     def __init__(self, token_yandex):
         self.token = token_yandex
-    
+
+    def _check_request(self, response):
+        try:
+            response.raise_for_status()
+            if response.ok:
+                print("Операция выполнена успешно!")
+            else:
+                print("Возникла ошибка при проведении операции!")
+        except requests.exceptions.HTTPError as error:
+            print(error)
+        return
  
-    def _get_link(self, path_to_file):
-        # Получение ссылки на загрузку
-        upload_url = "https://cloud-api.yandex.net/v1/disk/resources/upload"   
-        params = {"path": path_to_file, "overwrite": "true"}
+    def _create_folder(self, folder_name):
+        folder_URL = "https://cloud-api.yandex.net/v1/disk/resources"
+        params = {"path": folder_name}
         headers = {
             'Content-Type': 'application/json',
-            'Authorization': 'OAuth {}'.format(self.token)
+            'Authorization': self.token
             }
-        response = requests.get(upload_url, headers=headers, params=params)
-        return response.json()
-
-    def _upload_file(self, path_on_disk: str, file_path_upload):
-        """Метод загружает файл на яндекс диск"""  
-        response_dict = self._get_link(path_on_disk)
-        href = response_dict.get("href", "")   # возвращает пустую строку если нет ключа Хреф
-        #заливка
-        response = requests.post(href, data=open(file_path_upload, 'rb'))
-        response.raise_for_status()
-        if response.status_code == 201:
-            print("Фото успешно загружено!")
+        response = requests.put(folder_URL, headers=headers, params=params)
+        self._check_request(response)
         return
 
-if __name__ == '__main__':
+    def _upload_file(self, path_on_disk: str, file_path_upload):
+        headers = {
+            'Authorization': self.token
+            }
+        photo_url = requests.utils.quote(file_path_upload)
+        params = {
+            "url": photo_url,
+            "path": path_on_disk
+        }
+        # requests.utils.quote-преобразование текста в кодированный формат url
+        response = requests.post(
+            "https://cloud-api.yandex.net/v1/disk/resources/upload",
+            params=params,
+            headers=headers
+            )
+        self._check_request(response)
+        return
+
+if __name__=='__main__':
+    dotenv_path = os.path.join(os.path.dirname(__file__), 'config.env')
+    if os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path)
     print("Данная программа сделает бэкап ваших аватарок ВК на ЯндексДиск!")
     id_vk = input("Введите свой id Vkontakte:")
 # Test account https://vk.com/begemot_korovin  - id552934290
-    token_yandex = input("Введите свой токен YandexDisk:") 
+    token_yandex = os.getenv('YANDEX_KEY')
+    token_vk = os.getenv('VK_KEY')
     final_dict_urls = {}
-    
-    with open('token_vk.txt', 'r') as file_vk:
-        token_vk = file_vk.read().strip()
-        # Получить путь к загружаемому файлу и токен от пользователя
-    VKinfo._get_photos(id_vk, token_vk)
-    # print(VKinfo._photo_counter(final_dict_urls))
-    uploader = YaUploader(token_yandex)
-    for name, photos in final_dict_urls.items():  # проходимся циклом по словарю и загружаем фото по одному
-        # for photo in photos:
-        path_to_file = photos['url']               
-        disk_url = f"disk:/vk-backup-photos/{name}.jpg"
-        for i in tqdm(range(VKinfo._photo_counter(final_dict_urls)), desc = 'Uploading photos to Yandex Disk'): # прогресс загрузки
+
+    def photo_uploader(token_yandex, token_vk, id_vk):
+        VKinfo._get_photos(id_vk, token_vk)
+        uploader = YaUploader(token_yandex)
+        folder_name = "/vk-backup-photos"
+        uploader._create_folder(folder_name)
+        for name, photos in final_dict_urls.items():
+            path_to_file = photos['url']
+            disk_url = f"disk:{folder_name}/{name}.jpg"
+            uploader._upload_file(disk_url, path_to_file)
+        for i in tqdm(range(len(final_dict_urls)), 
+                      desc='Uploading photos to Yandex Disk'):
             time.sleep(0.2)
-        result = uploader._upload_file(disk_url, path_to_file)  # загрузило только когда прописал полный путь к файлу disk: и название
-        print(result)          
-        
 
-
- 
-
-
+    photo_uploader(token_yandex, token_vk, id_vk)

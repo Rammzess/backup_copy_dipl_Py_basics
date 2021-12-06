@@ -58,7 +58,6 @@ class VKinfo:
             json.dump(final_dict_urls, f,
                       ensure_ascii=False, indent=4
             )
-        # pprint(final_dict_urls)
         return final_dict_urls
 
 
@@ -72,7 +71,6 @@ class YaUploader:
             response.ok
         except requests.exceptions.HTTPError:
             raise UserException("Возникла ошибка!")
-        return
 
     def _get_info(self, dir_name):
         folder_URL = "https://cloud-api.yandex.net/v1/disk/resources/public"
@@ -100,7 +98,6 @@ class YaUploader:
             'path': res_name
         }
         requests.put(URL, headers=headers, params=params)
-        return
 
     def _create_folder(self, folder_name):
         folder_URL = "https://cloud-api.yandex.net/v1/disk/resources"
@@ -114,7 +111,6 @@ class YaUploader:
         response = requests.put(folder_URL, headers=headers, params=params)
         self._publish_res(folder_name)
         self._check_request(response)
-        return
 
     def _upload_file(self, path_on_disk: str, file_path_upload):
         headers = {
@@ -125,7 +121,6 @@ class YaUploader:
             "path": path_on_disk,
             "overwrite": "true"
         }
-        # requests.utils.quote-преобразование текста в кодированный формат url
         response = requests.post(
             "https://cloud-api.yandex.net/v1/disk/resources/upload",
             params=params,
@@ -135,7 +130,6 @@ class YaUploader:
         for i in tqdm(range(1),
                       desc='Uploading photo to Yandex Disk'):
             time.sleep(0.2)
-        return
 
 
 def photo_uploader(token_yandex, token_vk, id_vk):
@@ -161,7 +155,6 @@ if __name__ == '__main__':
         load_dotenv(dotenv_path)
     print("Данная программа сделает бэкап ваших аватарок ВК на ЯндексДиск!")
     id_vk = input("Введите свой id Vkontakte:")
-# https://vk.com/begemot_korovin - id552934290
     token_yandex = os.getenv('YANDEX_KEY')
     token_vk = os.getenv('VK_KEY')
     final_dict_urls = {}

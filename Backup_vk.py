@@ -26,6 +26,8 @@ class VKinfo:
             'extended': '1',
             'photo_sizes': '1'
         }
+        if id_vk == " " or id_vk.isdigit() is False:
+            raise UserException("Введены некорректные данные!")
         response = requests.get(URL, params=params, verify=True)
         response.raise_for_status()
         if response.ok:
